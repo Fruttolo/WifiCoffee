@@ -1,14 +1,53 @@
 #include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-#include <SPIFFS.h>
+#include <WebSocketsClient.h>
 
 const char* ssid = "SSID";
 const char* password = "PASSWORD";
 
-AsyncWebServer server(80);
-
 bool accendi = false;
 bool manopola = false;
+int secondi_aspettare = 20;
+
+
+const char* serverAddress = "192.168.1.100";  // IP del server WebSocket
+const int serverPort = 8080;                  // Porta del server WebSocket
+
+WebSocketsClient webSocket;
+
+void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
+
+    switch(type) {
+        case WStype_DISCONNECTED:
+            Serial.println("Disconnesso dal WebSocket server");
+            break;
+        case WStype_CONNECTED:
+            Serial.println("Connesso al WebSocket server");
+            webSocket.sendTXT("Ciao server!");
+            break;
+        case WStype_TEXT:
+            Serial.printf("Ricevuto messaggio: %s\n", payload);
+            if (strcmp((const char*)payload, "Accendi") == 0) {
+                accendi = true;
+                Serial.println("Accensione eseguita");
+                webSocket.sendTXT("Accensione eseguita");
+            } else if (strcmp((const char*)payload, "Manopola") == 0) {\
+                manopola = true;
+                Serial.println("Manopola girata");
+                webSocket.sendTXT("Manopola girata");
+            } else if (strncmp((const char*)payload, "SetSecondi", 10) == 0) {
+                int new_seconds;
+                sscanf((const char*)payload, "SetSecondi %d", &new_seconds);
+                secondi_aspettare = new_seconds;
+                Serial.printf("Secondi da aspettare impostati a: %d\n", secondi_aspettare);
+                webSocket.sendTXT("Secondi da aspettare impostati a: " + String(secondi_aspettare));
+            }
+            break;
+        case WStype_BIN:
+            Serial.println("Ricevuto messaggio binario");
+            webSocket.sendTXT("Messaggio binario ricevuto");
+            break;
+    }
+}
 
 void setup() {
   Serial.begin(115200);
@@ -27,34 +66,15 @@ void setup() {
   Serial.println("Connesso al WiFi");
   Serial.println(WiFi.localIP());
 
-  // Route per accendere il dispositivo
-  server.on("/accendi", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("Accensione");
-    accendi = true;
-    request->send(200, "text/plain", "Accensione eseguita");
-  });
+  // Configura WebSocket
+  webSocket.begin(serverAddress, serverPort, "/");
+  webSocket.onEvent(webSocketEvent);
 
-  // Route per fare il caffè
-  server.on("/manopola", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("Giramento manopola");
-    manopola = true;
-    request->send(200, "text/plain", "Manopola girata");
-  });
-  
-  // Route per fare il caffè
-  server.on("/faicaffe", HTTP_GET, [](AsyncWebServerRequest *request){
-    Serial.println("Preparazione caffè in corso");
-    request->send(200, "text/plain", "Caffè preparato");
-  });
-
-  // Servire il file HTML
-  //server.serveStatic("/", SPIFFS, "/index.html");
-
-  // Avvia il server
-  server.begin();
 }
 
 void loop() {
+  webSocket.loop();
+  
   if(accendi){
     digitalWrite(33, HIGH);
     delay(1000);    
@@ -66,7 +86,7 @@ void loop() {
     digitalWrite(12, HIGH);
     delay(1000);    
     digitalWrite(33, HIGH);
-    delay(1000*20);
+    delay(secondi_aspettare*1000);
     digitalWrite(33, LOW);
     delay(1000); 
     digitalWrite(13, LOW);
