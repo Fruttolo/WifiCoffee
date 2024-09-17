@@ -76,6 +76,13 @@ void setup() {
   webSocket.begin(serverAddress, serverPort, "/");
   webSocket.onEvent(webSocketEvent);
 
+  // Try to connect to the WebSocket server
+  while (!webSocket.isConnected()) {
+    Serial.println("Tentativo di connessione al WebSocket server...");
+    webSocket.loop();
+    delay(5000); // Wait 5 seconds before trying again
+  }
+  Serial.println("Connesso al WebSocket server");
 }
 
 void loop() {
