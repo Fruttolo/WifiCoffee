@@ -6,40 +6,46 @@ const char* password = "PASSWORD";
 
 bool accendi = false;
 bool manopola = false;
-int secondi_aspettare = 20;
-
-
-const char* serverAddress = "192.168.1.100";  // IP del server WebSocket
-const int serverPort = 8080;                  // Porta del server WebSocket
+int secondi_aspettare = 20;  
 
 WebSocketsClient webSocket;
+const char* serverAddress = "192.168.1.100"; 
+const int serverPort = 8080;   
+
+const char* COFFEE_MACHINE_ID = "COFFEE_MACHINE_ID";
+const char* COFFEE_MACHINE_TOKEN = "COFFEE_MACHINE_TOKEN";
 
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
 
     switch(type) {
         case WStype_DISCONNECTED:
             Serial.println("Disconnesso dal WebSocket server");
+            // Try to reconnect to the WebSocket server
+            while (!webSocket.isConnected()) {
+              Serial.println("Tentativo di riconnessione al WebSocket server...");
+              webSocket.begin(serverAddress, serverPort, "/");
+              webSocket.loop();
+              delay(5000); // Wait 5 seconds before trying again
+            }
+            Serial.println("Riconnesso al WebSocket server");
             break;
         case WStype_CONNECTED:
             Serial.println("Connesso al WebSocket server");
-            webSocket.sendTXT("Ciao server!");
+            webSocket.sendTXT("{ ID: \"" + String(COFFEE_MACHINE_ID) + "\", TOKEN: \"" + String(COFFEE_MACHINE_TOKEN) + "\" }");
             break;
         case WStype_TEXT:
             Serial.printf("Ricevuto messaggio: %s\n", payload);
-            if (strcmp((const char*)payload, "Accendi") == 0) {
+            if (strcmp((const char*)payload, "Accendi") == 0 || strcmp((const char*)payload, "Spegni") == 0) {
                 accendi = true;
                 Serial.println("Accensione eseguita");
-                webSocket.sendTXT("Accensione eseguita");
             } else if (strcmp((const char*)payload, "Manopola") == 0) {\
                 manopola = true;
                 Serial.println("Manopola girata");
-                webSocket.sendTXT("Manopola girata");
             } else if (strncmp((const char*)payload, "SetSecondi", 10) == 0) {
                 int new_seconds;
                 sscanf((const char*)payload, "SetSecondi %d", &new_seconds);
                 secondi_aspettare = new_seconds;
                 Serial.printf("Secondi da aspettare impostati a: %d\n", secondi_aspettare);
-                webSocket.sendTXT("Secondi da aspettare impostati a: " + String(secondi_aspettare));
             }
             break;
         case WStype_BIN:
