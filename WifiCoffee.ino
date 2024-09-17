@@ -1,5 +1,6 @@
 #include <WiFi.h>
 #include <WebSocketsClient.h>
+#include <HTTPClient.h>
 
 const char* ssid = "SSID";
 const char* password = "PASSWORD";
@@ -9,7 +10,8 @@ bool manopola = false;
 int secondi_aspettare = 20;  
 
 WebSocketsClient webSocket;
-const char* serverAddress = "192.168.1.100"; 
+HTTPClient http;
+const char* serverAddress = "192.168.1.137"; 
 const int serverPort = 8080;   
 
 const char* COFFEE_MACHINE_ID = "COFFEE_MACHINE_ID";
@@ -71,6 +73,18 @@ void setup() {
   
   Serial.println("Connesso al WiFi");
   Serial.println(WiFi.localIP());
+
+  // Effettua una richiesta GET al percorso /hello
+  String url = String("http://") + serverAddress + ":" + String(serverPort) + "/hello";
+  http.begin(url);
+  int httpCode = http.GET();
+  if (httpCode > 0) {
+    String payload = http.getString();
+    Serial.println("Risposta GET: " + payload);
+  } else {
+    Serial.println("Errore nella richiesta GET");
+  }
+  http.end();
 
   // Configura WebSocket
   webSocket.begin(serverAddress, serverPort, "/");
