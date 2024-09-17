@@ -36,7 +36,7 @@ void onMessageCallback(websockets::WebsocketsMessage message) {
 void onEventsCallback(websockets::WebsocketsEvent event, String data) {
     if (event == websockets::WebsocketsEvent::ConnectionOpened) {
         Serial.println("Connesso al WebSocket server");
-        webSocket.send("{ ID: \"" + String(COFFEE_MACHINE_ID) + "\", TOKEN: \"" + String(COFFEE_MACHINE_TOKEN) + "\" }");
+        webSocket.send("{ \"ID\": \"" + String(COFFEE_MACHINE_ID) + "\", \"TOKEN\": \"" + String(COFFEE_MACHINE_TOKEN) + "\" }");
     } else if (event == websockets::WebsocketsEvent::ConnectionClosed) {
         Serial.println("Disconnesso dal WebSocket server");
         // Try to reconnect to the WebSocket server
