@@ -31,6 +31,7 @@ async def on_event(websocket, path):
 
 async def connect():
     async with websockets.connect(server_address) as websocket:
+        print("Connesso al WebSocket server")
         await websocket.send(f'{{ "ID": "{coffee_machine_id}", "TOKEN": "{coffee_machine_token}" }}')
         await on_event(websocket, server_address)
 

@@ -3,15 +3,14 @@
 
 char* ssid = "SSID";
 char* password = "PASSWORD";
-
-bool accendi = false;
-bool manopola = false;
-int secondi_aspettare = 20;  
 const char* serverAddress = "192.168.1.137"; 
 const int serverPort = 8080;   
 const char* COFFEE_MACHINE_ID = "COFFEE_MACHINE_ID";
 char* COFFEE_MACHINE_TOKEN = "COFFEE_MACHINE_TOKEN";
 
+bool accendi = false;
+bool manopola = false;
+int secondi_aspettare = 20;  
 
 websockets::WebsocketsClient webSocket;
 
