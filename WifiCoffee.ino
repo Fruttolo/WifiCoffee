@@ -1,21 +1,19 @@
 #include <WiFi.h>
 #include <ArduinoWebsockets.h>
-#include <HTTPClient.h>
 
-const char* ssid = "SSID";
-const char* password = "PASSWORD";
+char* ssid = "SSID";
+char* password = "PASSWORD";
 
 bool accendi = false;
 bool manopola = false;
 int secondi_aspettare = 20;  
-
-websockets::WebsocketsClient webSocket;
-HTTPClient http;
 const char* serverAddress = "192.168.1.137"; 
 const int serverPort = 8080;   
-
 const char* COFFEE_MACHINE_ID = "COFFEE_MACHINE_ID";
-const char* COFFEE_MACHINE_TOKEN = "COFFEE_MACHINE_TOKEN";
+char* COFFEE_MACHINE_TOKEN = "COFFEE_MACHINE_TOKEN";
+
+
+websockets::WebsocketsClient webSocket;
 
 void onMessageCallback(websockets::WebsocketsMessage message) {
     Serial.printf("Ricevuto messaggio: %s\n", message.data().c_str());
@@ -30,6 +28,24 @@ void onMessageCallback(websockets::WebsocketsMessage message) {
         sscanf(message.data().c_str(), "SetSecondi %d", &new_seconds);
         secondi_aspettare = new_seconds;
         Serial.printf("Secondi da aspettare impostati a: %d\n", secondi_aspettare);
+    } else if (message.data().startsWith("Associate")) {
+        char token[50];
+        sscanf(message.data().c_str(), "Associate %s", token);
+        COFFEE_MACHINE_TOKEN = token;
+        Serial.printf("ID e TOKEN associati a: %s %s\n", COFFEE_MACHINE_ID, COFFEE_MACHINE_TOKEN);
+        webSocket.send("{ \"ID\": \"" + String(COFFEE_MACHINE_ID) + "\", \"TOKEN\": \"" + String(COFFEE_MACHINE_TOKEN) + "\" }");
+    } else if (message.data().startsWith("Wifi")) {
+        char ssid_new[50];
+        char password_new[50];
+        sscanf(message.data().c_str(), "Wifi %s %s", ssid_new, password_new);
+        Serial.printf("Nuove credenziali WiFi impostate a: %s %s\n", ssid_new, password_new);
+        WiFi.begin(ssid_new, password_new);
+        while (WiFi.status() != WL_CONNECTED) {
+            delay(1000);
+            Serial.println("Connessione al WiFi in corso...");
+        }
+        Serial.println("Connesso al WiFi");
+        Serial.println(WiFi.localIP());
     }
 }
 
@@ -48,8 +64,10 @@ void onEventsCallback(websockets::WebsocketsEvent event, String data) {
         Serial.println("Riconnesso al WebSocket server");
     } else if (event == websockets::WebsocketsEvent::GotPing) {
         Serial.println("Ping ricevuto");
+        webSocket.pong();
     } else if (event == websockets::WebsocketsEvent::GotPong) {
         Serial.println("Pong ricevuto");
+        webSocket.ping();
     }
 }
 
@@ -69,18 +87,6 @@ void setup() {
   
   Serial.println("Connesso al WiFi");
   Serial.println(WiFi.localIP());
-
-  // Effettua una richiesta GET al percorso /hello
-  String url = String("http://") + serverAddress + ":" + String(serverPort) + "/hello";
-  http.begin(url);
-  int httpCode = http.GET();
-  if (httpCode > 0) {
-    String payload = http.getString();
-    Serial.println("Risposta GET: " + payload);
-  } else {
-    Serial.println("Errore nella richiesta GET");
-  }
-  http.end();
 
   // Configura WebSocket
   webSocket.onMessage(onMessageCallback);
