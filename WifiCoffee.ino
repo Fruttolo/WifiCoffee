@@ -9,6 +9,7 @@ const char* COFFEE_MACHINE_ID = "COFFEE_MACHINE_ID";
 char* COFFEE_MACHINE_TOKEN = "COFFEE_MACHINE_TOKEN";  
 
 websockets::WebsocketsClient webSocket;
+unsigned long lastPingTime = 0;
 
 void onMessageCallback(websockets::WebsocketsMessage message) {
     Serial.printf("Ricevuto messaggio: %s\n", message.data().c_str());
@@ -38,10 +39,8 @@ void onMessageCallback(websockets::WebsocketsMessage message) {
         webSocket.send("{ \"ID\": \"" + String(COFFEE_MACHINE_ID) + "\", \"TOKEN\": \"" + String(COFFEE_MACHINE_TOKEN) + "\" }");
     } else if (message.data() == "Ping") {
         Serial.println("Ping ricevuto");
-        webSocket.send("Pong");
     } else if (message.data() == "Pong") {
         Serial.println("Pong ricevuto");
-        webSocket.send("Ping");
     }
 }
 
@@ -54,16 +53,14 @@ void onEventsCallback(websockets::WebsocketsEvent event, String data) {
         // Try to reconnect to the WebSocket server
         while (!webSocket.available()) {
             Serial.println("Tentativo di riconnessione al WebSocket server...");
-            webSocket.connect(serverAddress, serverPort);
+            webSocket.connect(serverAddress, serverPort, "/");
             delay(5000); // Wait 5 seconds before trying again
         }
         Serial.println("Riconnesso al WebSocket server");
     } else if (event == websockets::WebsocketsEvent::GotPing) {
         Serial.println("Ping ricevuto");
-        webSocket.pong();
     } else if (event == websockets::WebsocketsEvent::GotPong) {
         Serial.println("Pong ricevuto");
-        webSocket.ping();
     }
 }
 
@@ -87,7 +84,7 @@ void setup() {
   // Configura WebSocket
   webSocket.onMessage(onMessageCallback);
   webSocket.onEvent(onEventsCallback);
-  webSocket.connect(serverAddress, serverPort);
+  webSocket.connect(serverAddress, serverPort, "/");
 
   // Try to connect to the WebSocket server
   while (!webSocket.available()) {
@@ -99,4 +96,9 @@ void setup() {
 
 void loop() {
   webSocket.poll();
+  
+  if (millis() - lastPingTime >= 30000) {
+    webSocket.send("Ping");
+    lastPingTime = millis(); // Update the last ping time
+  }
 }
