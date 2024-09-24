@@ -89,6 +89,7 @@ void setup() {
   // Try to connect to the WebSocket server
   while (!webSocket.available()) {
     Serial.println("Tentativo di connessione al WebSocket server...");
+    webSocket.connect(serverAddress, serverPort, "/");
     delay(5000); // Wait 5 seconds before trying again
   }
   Serial.println("Connesso al WebSocket server");
@@ -97,7 +98,7 @@ void setup() {
 void loop() {
   webSocket.poll();
   
-  if (millis() - lastPingTime >= 30000) {
+  if (millis() - lastPingTime >= 30000 && webSocket.available()) {
     webSocket.send("Ping");
     lastPingTime = millis(); // Update the last ping time
   }
