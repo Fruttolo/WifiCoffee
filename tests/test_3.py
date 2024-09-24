@@ -36,10 +36,15 @@ async def on_events_callback(websocket):
     async for message in websocket:
         await on_message_callback(websocket, message)
 
-async def main():
-    async with websockets.connect(server_address) as websocket:
-        print("Connesso al WebSocket server")
-        await websocket.send(f'{{ "ID": "{COFFEE_MACHINE_ID}", "TOKEN": "{COFFEE_MACHINE_TOKEN}" }}')
-        await on_events_callback(websocket)
+async def connect_to_websocket():
+    while True:
+        try:
+            async with websockets.connect(server_address) as websocket:
+                print("Connesso al WebSocket server")
+                await websocket.send(f'{{ "ID": "{COFFEE_MACHINE_ID}", "TOKEN": "{COFFEE_MACHINE_TOKEN}" }}')
+                await on_events_callback(websocket)
+        except (Exception):
+            print("Disconnesso dal WebSocket server, tentativo di riconnessione in corso...")
+            await asyncio.sleep(5)  # Wait 5 seconds before trying again
 
-asyncio.get_event_loop().run_until_complete(main())
+asyncio.get_event_loop().run_until_complete(connect_to_websocket())
